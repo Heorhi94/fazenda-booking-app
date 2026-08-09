@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import DatePicker from 'react-datepicker';
+import DatePicker, { registerLocale } from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css"; 
-
+import { ru } from 'date-fns/locale';
+registerLocale('ru', ru);
 const WebApp = (window as any).Telegram.WebApp;
+
 
 interface Room {
   id: string;
@@ -34,7 +36,23 @@ function App() {
   useEffect(() => {
     const fetchRooms = async () => {
       try {
-        const response = await fetch('https://localhost:7045/api/rooms');
+        const response = await fetch(`https://fazenda-api-2026-h6bkg2dfcha6gtg9.polandcentral-01.azurewebsites.net/api/bookings/room/${selectedRoomId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setRooms(data);
+          if (data.length > 0) setSelectedRoomId(data[0].id);
+        }
+      } catch (error) {
+        console.error("Ошибка загрузки комнат:", error);
+      }
+    };
+    fetchRooms();
+  }, []);
+
+  useEffect(() => {
+    const fetchRooms = async () => {
+      try {
+        const response = await fetch('https://fazenda-api-2026-h6bkg2dfcha6gtg9.polandcentral-01.azurewebsites.net/api/rooms');
         if (response.ok) {
           const data = await response.json();
           setRooms(data);
@@ -52,7 +70,7 @@ function App() {
       if (!selectedRoomId) return;
       
       try {
-        const response = await fetch(`https://localhost:7045/api/bookings/room/${selectedRoomId}`);
+        const response = await fetch(`https://fazenda-api-2026-h6bkg2dfcha6gtg9.polandcentral-01.azurewebsites.net/api/bookings/room/${selectedRoomId}`);
         if (response.ok) {
           const bookingsData = await response.json();
           
@@ -134,7 +152,7 @@ function App() {
     };
 
     try {
-      const response = await fetch('https://localhost:7045/api/bookings', {
+      const response = await fetch('https://fazenda-api-2026-h6bkg2dfcha6gtg9.polandcentral-01.azurewebsites.net/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bookingData)
@@ -193,11 +211,14 @@ function App() {
         <div style={{ width: '48%' }}>
           <label style={{ fontSize: '14px' }}>Заезд <br/><small>(с 12:00)</small>:</label><br/>
           <DatePicker 
+            withPortal
+            locale="ru"
             selected={startDate}
-            onChange={(date) => {
+            onChange={(date: Date | null) => {
               setStartDate(date);
-              setEndDate(null); // Сбрасываем выезд при изменении заезда
+              setEndDate(null); 
             }}
+            onFocus={(e) => e.target.blur()}
             minDate={new Date()} 
             excludeDates={bookedDates} // Блокируем занятые дни для заезда
             dateFormat="dd.MM.yyyy"
@@ -207,9 +228,12 @@ function App() {
         </div>
         <div style={{ width: '48%' }}>
           <label style={{ fontSize: '14px' }}>Выезд <br/><small>(до 10:00)</small>:</label><br/>
-          <DatePicker 
+          <DatePicker
+            withPortal 
+            locale="ru"
             selected={endDate}
-            onChange={(date) => setEndDate(date)}
+            onChange={(date: Date | null) => setEndDate(date)}
+            onFocus={(e) => e.target.blur()}
             minDate={minCheckoutDate} // Нельзя выехать раньше следующего дня
             maxDate={maxCheckoutDate || undefined} // Нельзя выехать позже следующей брони
             disabled={!startDate} // Блокируем календарь, пока не выбран заезд!
@@ -228,11 +252,19 @@ function App() {
           border-radius: 4px;
           box-sizing: border-box;
           border: 1px solid #767676;
+          font-size: 16px;
         }
-        /* Делаем отключенный инпут визуально серым */
         .custom-datepicker:disabled {
           background-color: #e9ecef;
           cursor: not-allowed;
+        }
+        .react-datepicker-popper {
+          z-index: 9999 !important; 
+        }
+        
+        /* НОВОЕ ПРАВИЛО: Сдвигаем сам календарь немного вправо */
+        .react-datepicker {
+          margin-left: 20px !important;
         }
       `}</style>
 
@@ -242,7 +274,7 @@ function App() {
           value={guests} onChange={(e) => setGuests(Number(e.target.value))}
           style={{ width: '100%', padding: '8px', marginTop: '5px', borderRadius: '4px', boxSizing: 'border-box' }}
         >
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => <option key={num} value={num}>{num}</option>)}
+          {[1, 2, 3, 4, 5, 6].map((num) => <option key={num} value={num}>{num}</option>)}
         </select>
       </div>
 
